@@ -1,1 +1,344 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Administrator;
+
+class AdminAuthController extends Controller
+{
+    public function showLoginForm()
+    {
+        return view('admin.login');
+    }
+
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $admin = Administrator::where('username', $credentials['username'])
+            ->where('password', $credentials['password']) // plaintext same as old system
+            ->first();
+
+        if ($admin) {
+            session(['username' => $admin->username, 'role' => 'admin', 'admin_id' => $admin->id]);
+            return redirect()->route('admin.dashboard');
+        }
+
+        return back()->withErrors(['login' => 'Account does not exist.']);
+    }
+
+    public function logout(Request $request)
+    {
+        // End the session completely
+        $request->session()->flush();
+
+        // Regenerate session ID for security
+        $request->session()->regenerate();
+
+        // Redirect to homepage
+        return redirect()->route('home');
+    }
+
+}
+---------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Administrator;
+
+class AdminDashboardController extends Controller
+{
+    public function index(Request $request)
+    {
+        if (!$request->session()->has('username') || $request->session()->get('role') !== 'admin') {
+            return redirect()->route('admin.login');
+        }
+
+        $admin = Administrator::where('username', $request->session()->get('username'))->first();
+
+        return view('admin.dashboard', ['admin' => $admin]);
+    }
+}
+--------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Administrator;
+
+class AdminProfileController extends Controller
+{
+    public function index(Request $request)
+    {
+        if (!$request->session()->has('username') || $request->session()->get('role') !== 'admin') {
+            return redirect()->route('admin.login');
+        }
+
+        $admin = Administrator::where('username', $request->session()->get('username'))->first();
+        return view('admin.profile', ['admin' => $admin]);
+    }
+}
+------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\BaptismalRecord;
+
+class BaptismalController extends Controller
+{
+    // List all baptismal records
+    public function index(Request $request)
+    {
+        $search = $request->input('search', '');
+        $records = BaptismalRecord::where('full_name', 'like', "%$search%")
+            ->orderBy('baptismalrecord_id', 'asc')
+            ->get();
+
+        return view('admin.baptismal.index', compact('records', 'search'));
+    }
+
+    // Show the create form
+    public function create()
+    {
+        return view('admin.baptismal.create');
+    }
+
+    // Store a new record
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'full_name' => 'required|string|max:100',
+            'date_baptism' => 'required|date',
+            'place_baptism' => 'nullable|string|max:255',
+            'father_name' => 'nullable|string|max:100',
+            'mother_name' => 'nullable|string|max:100',
+            'godfather' => 'nullable|string|max:100',
+            'godmother' => 'nullable|string|max:100',
+            'priest_name' => 'nullable|string|max:100',
+        ]);
+
+        BaptismalRecord::create($data);
+
+        return redirect()->route('admin.baptismal.index')->with('success', 'Record added successfully.');
+    }
+
+    // Edit a record (uses route model binding)
+    public function edit(BaptismalRecord $baptismal)
+    {
+        return view('admin.baptismal.edit', ['record' => $baptismal]);
+    }
+
+    // Update a record (uses route model binding)
+    public function update(Request $request, BaptismalRecord $baptismal)
+    {
+        $data = $request->validate([
+            'full_name' => 'required|string|max:100',
+            'date_baptism' => 'required|date',
+            'place_baptism' => 'nullable|string|max:255',
+            'father_name' => 'nullable|string|max:100',
+            'mother_name' => 'nullable|string|max:100',
+            'godfather' => 'nullable|string|max:100',
+            'godmother' => 'nullable|string|max:100',
+            'priest_name' => 'nullable|string|max:100',
+        ]);
+
+        $baptismal->update($data);
+
+        return redirect()->route('admin.baptismal.index')->with('success', 'Record updated successfully.');
+    }
+
+    // Delete a record
+    public function destroy(BaptismalRecord $baptismal)
+    {
+        $baptismal->delete();
+
+        return redirect()->route('admin.baptismal.index')->with('success', 'Record deleted.');
+    }
+}
+-------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\CertificateRequest;
+
+class CertificateRequestController extends Controller
+{
+    /**
+     * Show pending certificate requests.
+     */
+    public function pending()
+    {
+        $requests = CertificateRequest::where('status', 'Pending')
+            ->orderBy('date_requested', 'desc')
+            ->get();
+
+        return view('admin.requests.pending', compact('requests'));
+    }
+
+    /**
+     * Show approved certificate requests.
+     */
+    public function approved()
+    {
+        $requests = CertificateRequest::where('status', 'Approved')
+            ->orderBy('date_requested', 'desc')
+            ->get();
+
+        return view('admin.requests.approved', compact('requests'));
+    }
+
+    /**
+     * Show rejected certificate requests.
+     */
+    public function rejected()
+    {
+        $requests = CertificateRequest::where('status', 'Rejected')
+            ->orderBy('date_requested', 'desc')
+            ->get();
+
+        return view('admin.requests.rejected', compact('requests'));
+    }
+
+    /**
+     * Update status of a certificate request (approve/reject)
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        // Fetch the certificate request by primary key
+        $certificate = CertificateRequest::findOrFail($id);
+
+        // Check action from form
+        if ($request->action === 'approve') {
+            $certificate->status = 'Approved';
+            $certificate->date_approved = now();
+        } elseif ($request->action === 'decline') {
+            $certificate->status = 'Rejected';
+        }
+
+        $certificate->save();
+
+        return redirect()->back()->with('success', 'Certificate request updated successfully.');
+    }
+}
+------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\ConfirmationRecord;
+
+class ConfirmationController extends Controller
+{
+    /**
+     * Display a listing of confirmation records.
+     */
+    public function index(Request $request)
+    {
+        $search = $request->input('search', '');
+
+        $records = ConfirmationRecord::query()
+            ->when($search, function ($query, $search) {
+                $query->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('place_confirmation', 'like', "%{$search}%")
+                    ->orWhere('priest_name', 'like', "%{$search}%");
+            })
+            ->orderBy('confirmationrecord_id', 'asc')
+            ->paginate(10);
+
+        return view('admin.confirmation.index', compact('records', 'search'));
+    }
+
+    /**
+     * Show the form for creating a new record.
+     */
+    public function create()
+    {
+        return view('admin.confirmation.create');
+    }
+
+    /**
+     * Store a newly created record in storage.
+     */
+    public function store(Request $request)
+    {
+        $validated = $this->validateRecord($request);
+
+        ConfirmationRecord::create($validated);
+
+        return redirect()->route('admin.confirmation.index')
+            ->with('success', 'Confirmation record added successfully.');
+    }
+
+    /**
+     * Show the form for editing the specified record.
+     */
+    public function edit($id)
+    {
+        $record = ConfirmationRecord::findOrFail($id);
+
+        return view('admin.confirmation.edit', compact('record'));
+    }
+
+    /**
+     * Update the specified record in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        $record = ConfirmationRecord::findOrFail($id);
+
+        $validated = $this->validateRecord($request);
+
+        $record->update($validated);
+
+        return redirect()->route('admin.confirmation.index')
+            ->with('success', 'Confirmation record updated successfully.');
+    }
+
+    /**
+     * Remove the specified record from storage.
+     */
+    public function destroy($id)
+    {
+        $record = ConfirmationRecord::findOrFail($id);
+        $record->delete();
+
+        return redirect()->route('admin.confirmation.index')
+            ->with('success', 'Confirmation record deleted successfully.');
+    }
+
+    /**
+     * Validation rules for store & update.
+     */
+    private function validateRecord(Request $request): array
+    {
+        return $request->validate([
+            'full_name' => 'required|string|max:255',
+            'place_confirmation' => 'required|string|max:255',
+            'date_confirmation' => 'required|date',
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
+            'sponsors' => 'nullable|string|max:255',
+            'priest_name' => 'nullable|string|max:255',
+        ]);
+    }
+}
 
