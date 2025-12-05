@@ -1,1 +1,284 @@
+<?php
 
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Hash;
+use App\Models\Parishioner;
+
+class UserAuthController extends Controller
+{
+    /**
+     * Show the login form.
+     */
+    public function showLoginForm()
+    {
+        // Redirect to dashboard if already logged in
+        if (Session::has('username') && Session::get('role') === 'user') {
+            return redirect()->route('user.dashboard');
+        }
+
+        return view('user.login');
+    }
+
+    /**
+     * Handle user login.
+     */
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        $user = Parishioner::where('username', $credentials['username'])->first();
+
+        if ($user && Hash::check($credentials['password'], $user->password)) {
+            // Store user info in session
+            Session::put('username', $user->username);
+            Session::put('parishioner_id', $user->parishioner_id);
+            Session::put('role', 'user');
+
+            // Regenerate session ID to prevent fixation attacks
+            $request->session()->regenerate();
+
+            return redirect()->route('user.dashboard');
+        }
+
+        return back()->withErrors([
+            'login' => 'Account does not exist or password is incorrect.'
+        ])->withInput($request->only('username'));
+    }
+
+    /**
+     * Logout the user.
+     */
+    public function logout(Request $request)
+    {
+        // Clear all session data
+        Session::flush();
+
+        // Regenerate session ID for security
+        $request->session()->regenerate();
+
+        // Redirect to home page instead of login
+        return redirect()->route('home')->with('success', 'You have been logged out.');
+    }
+}
+-------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session;
+use App\Models\CertificateRequest;
+use App\Models\Parishioner;
+
+class UserCertificateController extends Controller
+{
+    // Show the request form
+    public function showRequestForm()
+    {
+        $user = Parishioner::find(Session::get('parishioner_id'));
+        return view('user.request_certificate', compact('user'));
+    }
+
+    // Submit a new certificate request
+    public function submitRequest(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|string',
+            'owner_name' => 'required|string|max:100',
+            'father_name' => 'nullable|string|max:100',
+            'mother_name' => 'nullable|string|max:100',
+            'reason' => 'required|string|max:255',
+        ]);
+
+        CertificateRequest::create([
+            'parishioner_id' => Session::get('parishioner_id'),
+            'type' => $request->type,
+            'owner_name' => $request->owner_name,
+            'father_name' => $request->father_name,
+            'mother_name' => $request->mother_name,
+            'reason' => $request->reason,
+            'date_requested' => now(),
+            'status' => 'Pending',
+        ]);
+
+        return redirect()->route('user.certificates.track')
+            ->with('success', 'Certificate request submitted successfully.');
+    }
+
+    // Track user's own certificate requests
+    public function track(Request $request)
+    {
+        $userId = Session::get('parishioner_id');
+        $search = $request->input('search', '');
+
+        $user = Parishioner::find($userId);
+
+        $certificates = CertificateRequest::where('parishioner_id', $userId)
+            ->where('owner_name', 'like', "%{$search}%")
+            ->orderBy('date_requested', 'desc')
+            ->paginate(10);
+
+        return view('user.track_certificate', compact('certificates', 'search', 'user'));
+    }
+}
+-----------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Session;
+use App\Models\CertificateRequest;
+use App\Models\BaptismalRecord;
+use App\Models\ConfirmationRecord;
+use Barryvdh\DomPDF\Facade\Pdf; // <- Laravel DomPDF wrapper
+
+class UserCertificateGenerateController extends Controller
+{
+    // Show certificate preview page
+    public function preview($id)
+    {
+        $userId = Session::get('parishioner_id');
+
+        $cert = CertificateRequest::where('request_id', $id)
+            ->where('parishioner_id', $userId)
+            ->where('status', 'Approved')
+            ->firstOrFail();
+
+        $record = $this->getRecord($cert);
+
+        return view('user.certificate_preview', compact('cert', 'record'));
+    }
+
+    // Generate & download PDF
+    public function download($id)
+    {
+        $userId = Session::get('parishioner_id');
+
+        $cert = CertificateRequest::where('request_id', $id)
+            ->where('parishioner_id', $userId)
+            ->where('status', 'Approved')
+            ->firstOrFail();
+
+        $record = $this->getRecord($cert);
+
+        // Use Laravel DomPDF wrapper
+        $pdf = Pdf::loadView('pdf.certificate_layout', compact('cert', 'record'))
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->download("Certificate_{$cert->type}_{$cert->owner_name}.pdf");
+    }
+
+    // Get the associated Baptismal or Confirmation record
+    private function getRecord($cert)
+    {
+        if ($cert->type === 'Baptismal') {
+            return BaptismalRecord::whereRaw('UPPER(full_name) = UPPER(?)', [$cert->owner_name])
+                ->firstOrFail();
+        }
+
+        return ConfirmationRecord::whereRaw('UPPER(full_name) = UPPER(?)', [$cert->owner_name])
+            ->firstOrFail();
+    }
+}
+-------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Session;
+use App\Models\Parishioner;
+
+class UserDashboardController extends Controller
+{
+    public function index()
+    {
+        $userId = Session::get('parishioner_id');
+
+        if (!$userId) {
+            return redirect()->route('user.login');
+        }
+
+        $user = Parishioner::findOrFail($userId);
+
+        return view('user.dashboard', compact('user'));
+    }
+}
+-----------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Session;
+use App\Models\Parishioner;
+
+class UserProfileController extends Controller
+{
+    public function index()
+    {
+        $userId = Session::get('parishioner_id');
+
+        if (!$userId) {
+            return redirect()->route('user.login');
+        }
+
+        $user = Parishioner::findOrFail($userId);
+        return view('user.profile', compact('user'));
+    }
+}
+-------------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Parishioner;
+use Illuminate\Support\Facades\Hash;
+
+class UserRegistrationController extends Controller
+{
+    public function showForm()
+    {
+        return view('user.registration');
+    }
+
+    public function register(Request $request)
+    {
+        $request->validate([
+            'full_name' => 'required|string|max:100',
+            'dob' => 'required|date',
+            'address' => 'required|string|max:255',
+            'contact_number' => 'required|string|max:20',
+            'email' => 'required|email|max:100|unique:parishioners,email',
+            'username' => 'required|string|max:50|unique:parishioners,username',
+            'password' => 'required|string|min:8',  // ← updated for 8-char minimum
+        ]);
+
+        Parishioner::create([
+            'full_name' => $request->full_name,
+            'dob' => $request->dob,
+            'address' => $request->address,
+            'contact_number' => $request->contact_number,
+            'email' => $request->email,
+            'username' => $request->username,
+            'password' => Hash::make($request->password),
+            'date_registered' => now()->toDateString(),
+        ]);
+
+        return redirect()
+            ->route('user.login')
+            ->with('success', 'Registration successful! Please login.');
+    }
+}
+----------------------------------------------------------------------------------------------------------------
