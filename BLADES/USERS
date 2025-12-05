@@ -1,1 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ $cert->type }} Certificate</title>
+    <link rel="stylesheet" href="{{ asset('css/User/certificate.css') }}">
+</head>
+<body>
+<div class="certificate">
+    <!-- Header -->
+    <div class="header">
+        <img src="{{ asset('images/logo2.png') }}" class="logo" alt="Parish Logo">
+        <div class="parish-name">Sacred Heart of Jesus Parish</div>
+        <div class="parish-address">Barrio Obrero, Davao City | Tel: (082) 227-0397</div>
+    </div>
+
+    <!-- Certificate Title -->
+    <div class="cert-title">{{ $cert->type }} Certificate</div>
+
+    <!-- Recipient Name -->
+    <div class="recipient">{{ $record->full_name ?? $cert->owner_name ?? 'N/A' }}</div>
+
+    @php
+        // Determine correct action verb and date/place fields
+        if ($cert->type === 'Baptismal') {
+            $action = 'baptized';
+            $eventDate = !empty($record->date_baptism) ? date('F d, Y', strtotime($record->date_baptism)) : 'N/A';
+            $eventPlace = $record->place_baptism ?? 'N/A';
+        } elseif ($cert->type === 'Confirmation') {
+            $action = 'confirmed';
+            $eventDate = !empty($record->date_confirmation) ? date('F d, Y', strtotime($record->date_confirmation)) : 'N/A';
+            $eventPlace = $record->place_confirmation ?? 'N/A';
+        } else {
+            $action = strtolower($cert->type);
+            $eventDate = 'N/A';
+            $eventPlace = 'N/A';
+        }
+    @endphp
+
+        <!-- Certificate Text -->
+    <div class="cert-text">
+        This is to certify that <strong>{{ $record->full_name ?? $cert->owner_name ?? 'N/A' }}</strong>
+        was {{ $action }} at this Parish on
+        <strong>{{ $eventDate }}</strong> according to the rites of the Roman Catholic Church.
+    </div>
+
+    <!-- Details Section -->
+    <div class="details">
+        <div class="detail-row">
+            <span class="label">Father:</span>
+            <span class="value">{{ $record->father_name ?? $cert->father_name ?? 'N/A' }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Mother:</span>
+            <span class="value">{{ $record->mother_name ?? $cert->mother_name ?? 'N/A' }}</span>
+        </div>
+
+        @if($cert->type === 'Baptismal')
+            <div class="detail-row"><span class="label">Godfather:</span><span class="value">{{ $record->godfather ?? 'N/A' }}</span></div>
+            <div class="detail-row"><span class="label">Godmother:</span><span class="value">{{ $record->godmother ?? 'N/A' }}</span></div>
+        @elseif($cert->type === 'Confirmation')
+            <div class="detail-row"><span class="label">Sponsors:</span><span class="value">{{ $record->sponsors ?? 'N/A' }}</span></div>
+        @endif
+
+        <div class="detail-row">
+            <span class="label">Place:</span>
+            <span class="value">{{ $eventPlace }}</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Date Requested:</span>
+            <span class="value">{{ !empty($cert->date_requested) ? date('F d, Y', strtotime($cert->date_requested)) : 'N/A' }}</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Purpose:</span>
+            <span class="value">{{ $cert->reason ?? 'N/A' }}</span>
+        </div>
+    </div>
+
+    <!-- Given Text -->
+    <div class="given-text">
+        Given this day at Sacred Heart of Jesus Parish, Davao City
+    </div>
+
+    <!-- Footer & Signature -->
+    <div class="footer">
+        <div>
+            <strong>Date Issued:</strong><br>{{ date('F d, Y') }}
+        </div>
+        <div class="signature-section">
+            <div class="signature-line"></div>
+            <strong>Fr. Bong Gonzaga</strong><br>Parish Priest
+        </div>
+    </div>
+
+    <!-- Certificate Number -->
+    <div class="cert-number">
+        Certificate No: {{ $cert->request_id ?? 'N/A' }}
+    </div>
+</div>
+</body>
+</html>
+------------------------------------------------------------------------------------------------------------------------------------------
+@extends('layouts.user')
+
+@section('content')
+
+    <link rel="stylesheet" href="{{ asset('css/User/dashboard.css') }}">
+
+    <div class="header">
+        <img src="{{ asset('images/logo2.png') }}" alt="Logo" class="logo">
+        Sacred Heart of Jesus Parish
+    </div>
+
+    <h1>Welcome, {{ $user->full_name }}!</h1>
+    <p>This is the user dashboard for the Sacred Heart of Jesus Parish information system. You can request and track certificates here.</p>
+
+    <div class="dashboard">
+        <div class="box">
+            <h3>Request Certificate</h3>
+            <a href="{{ route('user.certificates.request') }}" class="btn-view">Go</a>
+        </div>
+
+        <div class="box">
+            <h3>Track Certificates</h3>
+            <a href="{{ route('user.certificates.track') }}" class="btn-view">Go</a>
+        </div>
+    </div>
+
+@endsection
+---------------------------------------------------------------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sacred Heart of Jesus Parish - User Login</title>
+    <link rel="stylesheet" href="{{ asset('css/User/login.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+
+<!-- Home button -->
+<a href="{{ route('home') }}" class="home-button">Home</a>
+
+<!-- Wrapper to center the form -->
+<div class="page-wrapper">
+    <div class="form-container">
+        <form method="POST" action="{{ route('user.login.post') }}">
+            @csrf
+
+            <img src="{{ asset('images/logo2.png') }}" width="100">
+
+            <div class="parish-title">Sacred Heart of Jesus Parish</div>
+            <div class="system-title">User Login</div>
+
+            @if ($errors->any())
+                <p class="error">{{ $errors->first() }}</p>
+            @endif
+
+            <input type="text"
+                   name="username"
+                   placeholder="Username"
+                   required
+                   value="{{ old('username') }}">
+
+            <input type="password"
+                   name="password"
+                   placeholder="Password"
+                   required>
+
+            <button type="submit">Log In</button>
+
+            <div id="donthaveaccount">
+                Don't have an account?
+                <a href="{{ route('user.register') }}">Sign Up</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
+-------------------------------------------------------------------------------------------------------------------------------------
+@extends('layouts.user')
+
+@section('content')
+    <link rel="stylesheet" href="{{ asset('css/User/profile.css') }}">
+
+    <div class="profile-container">
+        <h2>User Profile</h2>
+
+        <!-- Profile Image -->
+        <div class="profile-image-wrapper">
+            <img src="{{ $user->profile_image ? asset('storage/' . $user->profile_image) : asset('images/pfp.svg') }}" alt="Profile Image" class="profile-img">
+        </div>
+
+        <div class="profile-info">
+            <div><strong>Name:</strong> {{ $user->full_name }}</div>
+            <div><strong>Username:</strong> {{ $user->username }}</div>
+            <div><strong>Email:</strong> {{ $user->email }}</div>
+            <div><strong>Contact:</strong> {{ $user->contact_number ?? 'N/A' }}</div>
+        </div>
+
+        <a href="{{ route('user.dashboard') }}" class="back-link">← Back to Dashboard</a>
+    </div>
+@endsection
+-----------------------------------------------------------------------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sacred Heart of Jesus Parish - User Registration</title>
+    <link rel="stylesheet" href="{{ asset('css/User/registration.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <div class="form-container">
+        <form method="POST" action="{{ route('user.register.post') }}">
+            @csrf
+
+            <img src="{{ asset('images/logo2.png') }}" alt="Logo" class="logo">
+
+            <div class="parish-title">Sacred Heart of Jesus Parish</div>
+            <div class="system-title">User Registration</div>
+
+            @if($errors->any())
+                <p class="error">{{ $errors->first() }}</p>
+            @endif
+
+            <input type="text" name="full_name" placeholder="Full Name"
+                   required maxlength="100" value="{{ old('full_name') }}">
+
+            <!-- Birthdate -->
+            <div class="birthdate-group">
+                <label for="dob">Date of Birth:</label>
+                <input type="date" name="dob" id="dob" required value="{{ old('dob') }}">
+            </div>
+
+            <input type="text" name="address" placeholder="Address"
+                   required maxlength="255" value="{{ old('address') }}">
+
+            <input type="text" name="contact_number" placeholder="Contact Number"
+                   required maxlength="20" value="{{ old('contact_number') }}">
+
+            <input type="email" name="email" placeholder="Email"
+                   required maxlength="100" value="{{ old('email') }}">
+
+            <input type="text" name="username" placeholder="Username"
+                   required maxlength="50" value="{{ old('username') }}">
+
+            <input type="password" name="password" placeholder="Password"
+                   required maxlength="255">
+
+            <button type="submit">Register</button>
+
+            <div id="haveanaccount">
+                Already have an account?
+                <a href="{{ route('user.login') }}">Log In</a>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>
+------------------------------------------------------------------------------------------------------------------------------------------------------
+@extends('layouts.user')
+
+@section('content')
+    <link rel="stylesheet" href="{{ asset('css/User/certificate_request.css') }}">
+
+    <div class="main">
+        <!-- Sidebar is handled by your layout -->
+
+        <!-- Header/logo stays at the top -->
+        <div class="header">
+            <img src="{{ asset('images/logo2.png') }}" alt="Logo" class="logo">
+            Sacred Heart of Jesus Parish - Request Certificate
+        </div>
+
+        <!-- Form wrapper to center the form below the header -->
+        <div class="form-wrapper">
+            <div class="form-container">
+                <h2>Request Certificate</h2>
+
+                <!-- Success Message -->
+                @if(session('success'))
+                    <div class="success-msg">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('user.certificates.store') }}">
+                    @csrf
+
+                    <!-- Type of Certificate -->
+                    <div class="form-section">
+                        <h3>Type of Certificate:</h3>
+                        <div class="radio-row">
+                            <input type="radio" id="baptismal" name="type" value="Baptismal" required>
+                            <label for="baptismal">Baptismal</label>
+                            <input type="radio" id="confirmation" name="type" value="Confirmation" required>
+                            <label for="confirmation">Confirmation</label>
+                        </div>
+                    </div>
+
+                    <!-- Family Information -->
+                    <div class="form-section">
+                        <h3>Family Information</h3>
+                        <label for="owner_name">Owner Name</label>
+                        <input type="text" id="owner_name" name="owner_name" placeholder="Owner Name" required maxlength="100">
+
+                        <div class="form-row">
+                            <div class="input-large">
+                                <label for="father_name">Father's Name:</label>
+                                <input type="text" id="father_name" name="father_name" placeholder="Father's Name" maxlength="100">
+                            </div>
+                            <div class="input-large">
+                                <label for="mother_name">Mother's Name:</label>
+                                <input type="text" id="mother_name" name="mother_name" placeholder="Mother's Name" maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Details -->
+                    <div class="form-section">
+                        <h3>Details</h3>
+                        <label for="reason">Reason for Request:</label>
+                        <input type="text" id="reason" name="reason" placeholder="Reason for Request" required maxlength="255">
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="button-group">
+                        <input type="submit" value="Request Certificate" class="submit-btn">
+                        <a href="{{ route('user.dashboard') }}" class="cancel-btn">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endsection
+------------------------------------------------------------------------------------------------------------------------------------
+@extends('layouts.user')
+
+@section('content')
+    <link rel="stylesheet" href="{{ asset('css/User/track.css') }}">
+
+    <div class="main">
+        <div class="header">
+            <img src="{{ asset('images/logo2.png') }}" alt="Logo" class="logo">
+            Sacred Heart of Jesus Parish - Track Certificates
+        </div>
+
+        <div class="top-container">
+            @if(session('success'))
+                <div class="alert-success">{{ session('success') }}</div>
+            @endif
+
+            <form method="GET" class="search-bar">
+                <input type="text" name="search" placeholder="Search by name..." value="{{ $search ?? '' }}">
+                <button type="submit" class="submit-btn">Search</button>
+            </form>
+        </div>
+
+        <div class="records-section">
+            <div class="records-header">
+                <h3 class="records-title">Certificate Requests</h3>
+            </div>
+
+            @forelse($certificates as $request)
+                <div class="record">
+                    <h4>{{ $request->owner_name }} – {{ $request->date_requested->format('F d, Y') }}</h4>
+                    <p>Type: {{ $request->type }}</p>
+                    <p>Reason: {{ $request->reason }}</p>
+                    <p>Status: {{ $request->status }}</p>
+
+                    @if($request->status === 'Approved')
+                        <div class="record-actions">
+                            <a href="{{ route('user.certificates.preview', $request->request_id) }}" class="submit-btn">Preview</a>
+                            <a href="{{ route('user.certificates.pdf', $request->request_id) }}" class="submit-btn">Download</a>
+                        </div>
+                    @endif
+                </div>
+            @empty
+                <p>No certificate requests found.</p>
+            @endforelse
+
+            <div class="pagination" style="margin-top: 20px;">
+                {{ $certificates->withQueryString()->links() }}
+            </div>
+        </div>
+    </div>
+@endsection
 
