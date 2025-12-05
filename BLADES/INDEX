@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sacred Heart Of Jesus Parish Information System</title>
+    <link rel="stylesheet" href="{{ asset('css/index.css') }}">
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<div class="navbar">
+    <div class="nav-container">
+        <div class="logo-section">
+            <img src="{{ asset('images/logo2.png') }}" alt="Sacred Heart Logo" class="logo" />
+            <h1>Sacred Heart Of Jesus Parish</h1>
+        </div>
+        <div class="nav-links">
+            <a href="{{ url('/') }}">Home</a>
+            <a href="{{ route('user.login') }}">User Login</a>
+            <a href="{{ route('admin.login') }}">Admin Login</a>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+    <div class="welcome-section">
+        <h2>Welcome to Team B's Parish Information System</h2>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <div class="footer-content">
+        <p>&copy; {{ date('Y') }} Sacred Heart of Jesus Parish Information System. All rights reserved.</p>
+    </div>
+</div>
+
+</body>
+</html>
