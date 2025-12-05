@@ -1,1 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ $cert->type }} Certificate</title>
+    <link rel="stylesheet" href="{{ public_path('css/User/pdf.css') }}">
+</head>
+<body>
+<div class="certificate">
+    <!-- Header -->
+    <div class="header">
+        <img src="{{ public_path('images/logo2.png') }}" class="logo" alt="Parish Logo">
+        <div class="parish-name">Sacred Heart of Jesus Parish</div>
+        <div class="parish-address">Barrio Obrero, Davao City | Tel: (082) 227-0397</div>
+    </div>
+
+    <!-- Certificate Title -->
+    <div class="cert-title">{{ $cert->type }} Certificate</div>
+
+    <!-- Recipient Name -->
+    <div class="recipient">{{ $record->full_name ?? $cert->owner_name ?? 'N/A' }}</div>
+
+    @php
+        // Determine correct action verb and date/place fields
+        if ($cert->type === 'Baptismal') {
+            $action = 'baptized';
+            $eventDate = !empty($record->date_baptism) ? date('F d, Y', strtotime($record->date_baptism)) : 'N/A';
+            $eventPlace = $record->place_baptism ?? 'N/A';
+        } elseif ($cert->type === 'Confirmation') {
+            $action = 'confirmed';
+            $eventDate = !empty($record->date_confirmation) ? date('F d, Y', strtotime($record->date_confirmation)) : 'N/A';
+            $eventPlace = $record->place_confirmation ?? 'N/A';
+        } else {
+            $action = strtolower($cert->type);
+            $eventDate = 'N/A';
+            $eventPlace = 'N/A';
+        }
+    @endphp
+
+        <!-- Certificate Text -->
+    <div class="cert-text">
+        This is to certify that <strong>{{ $record->full_name ?? $cert->owner_name ?? 'N/A' }}</strong>
+        was {{ $action }} at this Parish on
+        <strong>{{ $eventDate }}</strong> according to the rites of the Roman Catholic Church.
+    </div>
+
+    <!-- Details Section -->
+    <div class="details">
+        <div class="detail-row">
+            <span class="label">Father:</span>
+            <span class="value">{{ $record->father_name ?? $cert->father_name ?? 'N/A' }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Mother:</span>
+            <span class="value">{{ $record->mother_name ?? $cert->mother_name ?? 'N/A' }}</span>
+        </div>
+
+        @if($cert->type === 'Baptismal')
+            <div class="detail-row"><span class="label">Godfather:</span><span class="value">{{ $record->godfather ?? 'N/A' }}</span></div>
+            <div class="detail-row"><span class="label">Godmother:</span><span class="value">{{ $record->godmother ?? 'N/A' }}</span></div>
+        @elseif($cert->type === 'Confirmation')
+            <div class="detail-row"><span class="label">Sponsors:</span><span class="value">{{ $record->sponsors ?? 'N/A' }}</span></div>
+        @endif
+
+        <div class="detail-row">
+            <span class="label">Place:</span>
+            <span class="value">{{ $eventPlace }}</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Date Requested:</span>
+            <span class="value">{{ !empty($cert->date_requested) ? date('F d, Y', strtotime($cert->date_requested)) : 'N/A' }}</span>
+        </div>
+
+        <div class="detail-row">
+            <span class="label">Purpose:</span>
+            <span class="value">{{ $cert->reason ?? 'N/A' }}</span>
+        </div>
+    </div>
+
+    <!-- Given Text -->
+    <div class="given-text">
+        Given this day at Sacred Heart of Jesus Parish, Davao City
+    </div>
+
+    <!-- Footer & Signature -->
+    <div class="footer">
+        <div>
+            <strong>Date Issued:</strong><br>{{ date('F d, Y') }}
+        </div>
+        <div class="signature-section">
+            <div class="signature-line"></div>
+            <strong>Fr. Bong Gonzaga</strong><br>Parish Priest
+        </div>
+    </div>
+
+    <!-- Certificate Number -->
+    <div class="cert-number">
+        Certificate No: {{ $cert->request_id ?? 'N/A' }}
+    </div>
+</div>
+</body>
+</html>
 
