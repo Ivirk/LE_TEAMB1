@@ -1,0 +1,120 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+// ============================
+// ADMIN CONTROLLERS
+// ============================
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminProfileController;
+use App\Http\Controllers\Admin\BaptismalController;
+use App\Http\Controllers\Admin\ConfirmationController;
+use App\Http\Controllers\Admin\CertificateRequestController;
+
+// ============================
+// USER CONTROLLERS
+// ============================
+use App\Http\Controllers\User\UserAuthController;
+use App\Http\Controllers\User\UserRegistrationController;
+use App\Http\Controllers\User\UserDashboardController;
+use App\Http\Controllers\User\UserCertificateController;
+use App\Http\Controllers\User\UserCertificateGenerateController;
+use App\Http\Controllers\User\UserProfileController;
+
+// ============================
+// HOME PAGE
+// ============================
+Route::get('/', fn() => view('index'))->name('home');
+
+// =================================================================
+// USER ROUTES (prefix /user)
+// =================================================================
+Route::prefix('user')->name('user.')->group(function () {
+
+    // USER AUTH
+    Route::get('/login', [UserAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [UserAuthController::class, 'login'])->name('login.post');
+    Route::get('/logout', [UserAuthController::class, 'logout'])->name('logout');
+
+
+    // USER REGISTRATION
+    Route::get('/register', [UserRegistrationController::class, 'showForm'])->name('register');
+    Route::post('/register', [UserRegistrationController::class, 'register'])->name('register.post');
+
+    // PROTECTED USER ROUTES
+    Route::middleware('user.auth')->group(function () {
+
+        Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/profile', [UserProfileController::class, 'index'])->name('profile');
+
+        // CERTIFICATE ROUTES
+        Route::prefix('certificates')->name('certificates.')->group(function () {
+
+            Route::get('/request', [UserCertificateController::class, 'showRequestForm'])->name('request');
+            Route::post('/request', [UserCertificateController::class, 'submitRequest'])->name('store');
+            Route::get('/track', [UserCertificateController::class, 'track'])->name('track');
+
+            // PREVIEW & DOWNLOAD
+            Route::get('/preview/{id}', [UserCertificateGenerateController::class, 'preview'])->name('preview');
+            Route::get('/pdf/{id}', [UserCertificateGenerateController::class, 'download'])->name('pdf');
+        });
+    });
+});
+
+// =================================================================
+// ADMIN ROUTES (prefix /admin)
+// =================================================================
+Route::prefix('admin')->name('admin.')->group(function () {
+
+    // ADMIN AUTH
+    Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AdminAuthController::class, 'login'])->name('login.post');
+    Route::get('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+
+    // PROTECTED ADMIN ROUTES
+    Route::middleware('admin')->group(function () {
+
+        // Dashboard & Profile
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/profile', [AdminProfileController::class, 'index'])->name('profile');
+
+        // =======================
+        // BAPTISMAL RECORD ROUTES
+        // =======================
+        Route::resource('baptismal', BaptismalController::class)
+            ->names([
+                'index' => 'baptismal.index',
+                'create' => 'baptismal.create',
+                'store' => 'baptismal.store',
+                'show' => 'baptismal.show',
+                'edit' => 'baptismal.edit',
+                'update' => 'baptismal.update',
+                'destroy' => 'baptismal.destroy',
+            ]);
+
+        // =======================
+        // CONFIRMATION RECORD ROUTES
+        // =======================
+        Route::resource('confirmation', ConfirmationController::class)
+            ->names([
+                'index' => 'confirmation.index',
+                'create' => 'confirmation.create',
+                'store' => 'confirmation.store',
+                'show' => 'confirmation.show',
+                'edit' => 'confirmation.edit',
+                'update' => 'confirmation.update',
+                'destroy' => 'confirmation.destroy',
+            ]);
+
+        // =======================
+        // CERTIFICATE REQUEST MANAGEMENT
+        // =======================
+        Route::prefix('certificaterequests')->name('certificaterequests.')->group(function () {
+            Route::get('/pending', [CertificateRequestController::class, 'pending'])->name('pending');
+            Route::get('/approved', [CertificateRequestController::class, 'approved'])->name('approved');
+            Route::get('/rejected', [CertificateRequestController::class, 'rejected'])->name('rejected');
+            Route::post('/{id}/update', [CertificateRequestController::class, 'updateStatus'])->name('update');
+        });
+    });
+});
