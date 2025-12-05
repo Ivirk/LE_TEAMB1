@@ -1,0 +1,85 @@
+@extends('layouts.admin')
+
+@section('content')
+    <link rel="stylesheet" href="{{ asset('css/Admin/requests.css') }}">
+    <div class="header">
+        Approved Certificate Requests
+    </div>
+
+    <!-- Back button -->
+    <a href="{{ route('admin.dashboard') }}" class="btn-back">← Back to Dashboard</a>
+
+    @if($requests->count() > 0)
+        @foreach($requests as $request)
+            <div class="card">
+                <h3>{{ $request->owner_name }} ({{ $request->type }})</h3>
+                <p><strong>Reason:</strong> {{ $request->reason }}</p>
+                <p><strong>Status:</strong> {{ $request->status }}</p>
+                <p><strong>Date Requested:</strong> {{ $request->date_requested->format('F d, Y') }}</p>
+                <p><strong>Date Approved:</strong> {{ $request->date_approved?->format('F d, Y') }}</p>
+            </div>
+        @endforeach
+    @else
+        <p>No approved certificate requests found.</p>
+    @endif
+@endsection
+
+------------------------------------------------------------------------------------------------------------------------
+@extends('layouts.admin')
+
+@section('content')
+    <link rel="stylesheet" href="{{ asset('css/Admin/requests.css') }}">
+
+    <div class="header">
+        Pending Certificate Requests
+    </div>
+
+    <!-- Back button -->
+    <a href="{{ route('admin.dashboard') }}" class="btn-back">← Back to Dashboard</a>
+
+    @if($requests->count() > 0)
+        @foreach($requests as $request)
+            <div class="card">
+                <h3>{{ $request->owner_name }} ({{ $request->type }})</h3>
+                <p><strong>Reason:</strong> {{ $request->reason }}</p>
+                <p><strong>Status:</strong> {{ $request->status }}</p>
+                <p><strong>Date Requested:</strong> {{ $request->date_requested->format('F d, Y') }}</p>
+
+                <!-- Approve/Decline form -->
+                <form action="{{ route('admin.certificaterequests.update', $request->request_id) }}" method="POST" class="action-buttons">
+                    @csrf
+                    <button type="submit" name="action" value="approve" class="action-btn approve">Approve</button>
+                    <button type="submit" name="action" value="decline" class="action-btn decline">Decline</button>
+                </form>
+            </div>
+        @endforeach
+    @else
+        <p>No pending certificate requests found.</p>
+    @endif
+@endsection
+---------------------------------------------------------------------------------------
+@extends('layouts.admin')
+
+@section('content')
+    <link rel="stylesheet" href="{{ asset('css/Admin/requests.css') }}">
+
+    <div class="header">
+        Rejected Certificate Requests
+    </div>
+
+    <!-- Back button -->
+    <a href="{{ route('admin.dashboard') }}" class="btn-back">← Back to Dashboard</a>
+
+    @if($requests->count() > 0)
+        @foreach($requests as $request)
+            <div class="card">
+                <h3>{{ $request->owner_name }} ({{ $request->type }})</h3>
+                <p><strong>Reason:</strong> {{ $request->reason }}</p>
+                <p><strong>Status:</strong> {{ $request->status }}</p>
+                <p><strong>Date Requested:</strong> {{ $request->date_requested->format('F d, Y') }}</p>
+            </div>
+        @endforeach
+    @else
+        <p>No rejected certificate requests found.</p>
+    @endif
+@endsection
