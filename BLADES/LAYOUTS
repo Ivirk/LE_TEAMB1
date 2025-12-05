@@ -1,1 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin - Sacred Heart of Jesus Parish</title>
+    <link rel="stylesheet" href="{{ asset('css/Admin/admin.css') }}">
+</head>
+<body>
+
+<div class="sidebar">
+    <a href="{{ route('admin.profile') }}" class="username-link">
+        <img src="{{ asset('images/profile.jpeg') }}" alt="Profile" class="profile-img">
+        <div class="username">{{ session('username') }}</div>
+    </a>
+
+    <a href="{{ route('admin.dashboard') }}"
+       class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
+
+    <a href="{{ route('admin.baptismal.index') }}"
+       class="{{ request()->routeIs('admin.baptismal.*') ? 'active' : '' }}">Baptismal</a>
+
+    <a href="{{ route('admin.confirmation.index') }}"
+       class="{{ request()->routeIs('admin.confirmation.*') ? 'active' : '' }}">Confirmation</a>
+
+    @if(request()->routeIs('admin.certificaterequests.pending'))
+        <a href="{{ route('admin.certificaterequests.pending') }}" class="active">Pending</a>
+    @elseif(request()->routeIs('admin.certificaterequests.approved'))
+        <a href="{{ route('admin.certificaterequests.approved') }}" class="active">Approved</a>
+    @elseif(request()->routeIs('admin.certificaterequests.rejected'))
+        <a href="{{ route('admin.certificaterequests.rejected') }}" class="active">Rejected</a>
+    @endif
+
+    <a href="{{ route('admin.logout') }}" class="logout">Logout</a>
+</div>
+
+<div class="main">
+    @yield('content')
+</div>
+
+</body>
+</html>
+-------------------------------------------------------------------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html>
+<head>
+    <title>@yield('title', 'User Dashboard')</title>
+    <link rel="stylesheet" href="{{ asset('css/User/dashboard.css') }}">
+</head>
+<body>
+<div class="sidebar">
+    <a href="{{ route('user.profile') }}" class="username-link">
+        <img src="{{ asset('images/pfp.svg') }}" alt="Profile" class="profile-img">
+        <div class="username">{{ $user->full_name }}</div>
+    </a>
+
+    <div class="email">{{ $user->email }}</div>
+
+    <a href="{{ route('user.dashboard') }}" class="{{ request()->routeIs('user.dashboard') ? 'active' : '' }}">Dashboard</a>
+    <a href="{{ route('user.certificates.request') }}" class="{{ request()->routeIs('user.certificates.request') ? 'active' : '' }}">Request</a>
+    <a href="{{ route('user.certificates.track') }}" class="{{ request()->routeIs('user.certificates.track') ? 'active' : '' }}">Track</a>
+    <a href="{{ route('user.logout') }}" class="logout">Log out</a>
+</div>
+
+
+<div class="main">
+    @yield('content')
+</div>
+</body>
+</html>
 
