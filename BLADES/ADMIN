@@ -1,1 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin - Sacred Heart of Jesus Parish</title>
+    <link rel="stylesheet" href="{{ asset('css/Admin/admin.css') }}">
+</head>
+<body>
 
+<div class="sidebar">
+    <a href="{{ route('admin.profile') }}" class="username-link">
+        <img src="{{ asset('images/profile.jpeg') }}" alt="Profile" class="profile-img">
+        <div class="username">{{ session('username') }}</div>
+    </a>
+
+    <a href="{{ route('admin.dashboard') }}"
+       class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
+
+    <a href="{{ route('admin.baptismal.index') }}"
+       class="{{ request()->routeIs('admin.baptismal.*') ? 'active' : '' }}">Baptismal</a>
+
+    <a href="{{ route('admin.confirmation.index') }}"
+       class="{{ request()->routeIs('admin.confirmation.*') ? 'active' : '' }}">Confirmation</a>
+
+    @if(request()->routeIs('admin.certificaterequests.pending'))
+        <a href="{{ route('admin.certificaterequests.pending') }}" class="active">Pending</a>
+    @elseif(request()->routeIs('admin.certificaterequests.approved'))
+        <a href="{{ route('admin.certificaterequests.approved') }}" class="active">Approved</a>
+    @elseif(request()->routeIs('admin.certificaterequests.rejected'))
+        <a href="{{ route('admin.certificaterequests.rejected') }}" class="active">Rejected</a>
+    @endif
+
+    <a href="{{ route('admin.logout') }}" class="logout">Logout</a>
+</div>
+
+<div class="main">
+    @yield('content')
+</div>
+
+</body>
+</html>
+
+----------------------------------------------------------------------------------------------------------------------------------------
+@extends('layouts.admin')
+
+@section('content')
+
+    <link rel="stylesheet" href="{{ asset('css/Admin/admindashboard.css') }}">
+
+    <div class="header">
+        <img src="{{ asset('images/logo2.png') }}" alt="Logo" class="logo">
+        Sacred Heart of Jesus Parish
+    </div>
+
+    <h1>Welcome, {{ session('username') }}!</h1>
+    <p>This is the admin dashboard for the Sacred Heart of Jesus Parish information system.</p>
+
+    @php
+        use App\Models\CertificateRequest;
+
+        $pendingCount = CertificateRequest::where('status', 'Pending')->count();
+        $approvedCount = CertificateRequest::where('status', 'Approved')->count();
+        $rejectedCount = CertificateRequest::where('status', 'Rejected')->count();
+    @endphp
+
+    <div class="dashboard">
+        <div class="box">
+            <div class="count">{{ $pendingCount }}</div>
+            <div class="label">Pending Requests</div>
+            <a href="{{ route('admin.certificaterequests.pending') }}" class="btn-view">View</a>
+        </div>
+
+        <div class="box">
+            <div class="count">{{ $approvedCount }}</div>
+            <div class="label">Approved Requests</div>
+            <a href="{{ route('admin.certificaterequests.approved') }}" class="btn-view">View</a>
+        </div>
+
+        <div class="box">
+            <div class="count">{{ $rejectedCount }}</div>
+            <div class="label">Rejected Requests</div>
+            <a href="{{ route('admin.certificaterequests.rejected') }}" class="btn-view">View</a>
+        </div>
+    </div>
+
+@endsection
+----------------------------------------------------------------------------------------------------------------------------
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sacred Heart of Jesus Parish - Admin Login</title>
+    <link rel="stylesheet" href="{{ asset('css/Admin/adminlogin.css') }}">
+</head>
+<body>
+<!-- Home button -->
+<a href="{{ route('home') }}" class="home-button">Home</a>
+
+<form method="POST" action="{{ route('admin.login.post') }}">
+    @csrf
+    <img src="{{ asset('images/logo2.png') }}" width="100">
+    <div class="parish-title">Sacred Heart of Jesus Parish</div>
+    <div class="system-title">Admin Login</div>
+
+    @if ($errors->any())
+        <p class="error">{{ $errors->first() }}</p>
+    @endif
+
+    <input type="text" name="username" placeholder="Username" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <button type="submit">Log In</button>
+</form>
+</body>
+</html>
+-------------------------------------------------------------------------------------------------------------------------------
+@extends('layouts.admin')
+
+@section('title', 'Admin Profile')
+
+@section('content')
+    <link rel="stylesheet" href="{{ asset('css/Admin/adminprofile.css') }}">
+
+    <div class="profile-container">
+        <h2>Administrator Profile</h2>
+        <div class="profile-image-wrapper">
+            <img src="{{ $admin->profile_image ? asset('storage/' . $admin->profile_image) : asset('images/profile.jpeg') }}" alt="Profile Image" class="profile-img">
+        </div>
+        <div class="profile-info">
+            <div><strong>Name:</strong> {{ $admin->name }}</div>
+            <div><strong>Username:</strong> {{ $admin->username }}</div>
+            <div><strong>Email:</strong> {{ $admin->email }}</div>
+            <div><strong>Contact:</strong> {{ $admin->contact_number ?? 'N/A' }}</div>
+        </div>
+
+        <a href="{{ route('admin.dashboard') }}" class="back-link">← Back to Dashboard</a>
+    </div>
+@endsection
+-------------------------------------------------------------------------------------------------------------------------------------------
