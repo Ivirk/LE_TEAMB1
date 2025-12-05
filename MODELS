@@ -1,0 +1,263 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Administrator extends Model
+{
+    use HasFactory;
+
+    protected $table = 'Administrator';
+    protected $primaryKey = 'admin_id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'name',
+        'email',
+        'contact_number',
+        'username',
+        'password',
+    ];
+
+    protected $hidden = ['password'];
+
+    public function baptismalRecords()
+    {
+        return $this->hasMany(BaptismalRecord::class, 'admin_id', 'admin_id');
+    }
+
+    public function confirmationRecords()
+    {
+        return $this->hasMany(ConfirmationRecord::class, 'admin_id', 'admin_id');
+    }
+
+    public function certificateRequests()
+    {
+        return $this->hasMany(CertificateRequest::class, 'admin_id', 'admin_id');
+    }
+}
+-------------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class BaptismalRecord extends Model
+{
+    use HasFactory;
+
+    protected $table = 'BaptismalRecords';
+    protected $primaryKey = 'baptismalrecord_id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'admin_id',
+        'full_name',
+        'date_baptism',
+        'place_baptism',
+        'father_name',
+        'mother_name',
+        'godfather',
+        'godmother',
+        'priest_name',
+    ];
+
+    protected $dates = ['date_baptism'];
+
+    public function admin()
+    {
+        return $this->belongsTo(Administrator::class, 'admin_id', 'admin_id');
+    }
+}
+-----------------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class CertificateRequest extends Model
+{
+    use HasFactory;
+
+    protected $table = 'CertificateRequests';
+    protected $primaryKey = 'request_id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'parishioner_id',
+        'admin_id',
+        'type',           // 'Baptismal' or 'Confirmation'
+        'owner_name',
+        'father_name',
+        'mother_name',
+        'reason',         // field for reason/purpose
+        'date_requested',
+        'status',         // 'Pending','Approved','Rejected'
+        'date_approved',
+    ];
+
+    protected $casts = [
+        'date_requested' => 'datetime',
+        'date_approved'  => 'datetime',
+    ];
+
+    // Relationships
+    public function parishioner()
+    {
+        return $this->belongsTo(Parishioner::class, 'parishioner_id', 'parishioner_id');
+    }
+
+    public function admin()
+    {
+        return $this->belongsTo(Administrator::class, 'admin_id', 'admin_id');
+    }
+}
+----------------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class ConfirmationRecord extends Model
+{
+    use HasFactory;
+
+    protected $table = 'ConfirmationRecords';
+    protected $primaryKey = 'confirmationrecord_id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'admin_id',
+        'full_name',
+        'date_confirmation',
+        'place_confirmation',
+        'father_name',
+        'mother_name',
+        'sponsors',
+        'priest_name',
+    ];
+
+    protected $dates = ['date_confirmation'];
+
+    public function admin()
+    {
+        return $this->belongsTo(Administrator::class, 'admin_id', 'admin_id');
+    }
+}
+---------------------------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Parishioner extends Model
+{
+    use HasFactory;
+
+    // Table in your SQL is `Parishioners`
+    protected $table = 'Parishioners';
+
+    // Primary key field in SQL: parishioner_id
+    protected $primaryKey = 'parishioner_id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    // The SQL dump uses date fields and no created_at/updated_at columns
+    public $timestamps = false;
+
+    protected $fillable = [
+        'full_name',
+        'dob',
+        'address',
+        'contact_number',
+        'email',
+        'username',
+        'password',
+        'date_registered',
+    ];
+
+    protected $dates = [
+        'dob',
+        'date_registered',
+    ];
+
+    // Hide password from array / JSON
+    protected $hidden = ['password'];
+
+    // Relationships
+    public function certificateRequests()
+    {
+        return $this->hasMany(CertificateRequest::class, 'parishioner_id', 'parishioner_id');
+    }
+}
+--------------------------------------------------------------------------------------------------------------------
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+
+class User extends Authenticatable
+{
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'remember_token',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'two_factor_confirmed_at' => 'datetime',
+        ];
+    }
+}
